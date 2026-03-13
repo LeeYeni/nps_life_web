@@ -10,24 +10,25 @@ export default function ChatPage() {
   const router = useRouter();
   const scrollRef = useRef<HTMLDivElement>(null);
   const [isLeader, setIsLeader] = useState<boolean>(false);
+  const [isLogin, setIsLogin] = useState<boolean>(false); // 로그인 상태도 state로 관리
 
   const roomData = mockChatRooms[0];
 
   useEffect(() => {
-    // 1. localStorage에서 방장 여부 확인
+    // [수정] 브라우저 환경에서만 localStorage에 접근하도록 useEffect 내부에서 처리
     const leaderStatus = localStorage.getItem("isLeader") === "true";
+    const loginStatus = localStorage.getItem("isLogin") === "true";
+    
     setIsLeader(leaderStatus);
+    setIsLogin(loginStatus);
 
-    // 2. 페이지 진입 시 스크롤 최하단으로
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, []);
 
-  // [NPS 핵심 로직] 본인 여부 판별 함수
+  // [수정] 빌드 시 에러를 방지하기 위해 로직을 State 기반으로 변경
   const checkIsMe = (senderId: number) => {
-    // localStorage에 정보가 없거나 로그인이 안 된 경우는 모두 Receiver 처리
-    const isLogin = localStorage.getItem("isLogin") === "true";
     if (!isLogin) return false;
 
     if (isLeader) {
@@ -35,14 +36,12 @@ export default function ChatPage() {
       return senderId === 1;
     } else {
       // 내가 참여자일 때: 데이터의 참여자 ID(999)가 '나'
-      // 페르소나 4 혹은 장바구니에서 새로 참여한 경우
       return senderId === 999;
     }
   };
 
   return (
     <div className="flex flex-col h-screen w-full bg-white md:bg-gray-50 overflow-hidden font-sans">
-      {/* 1. 상단 고정 헤더 */}
       <header className="bg-white px-6 py-4 flex items-center justify-between border-b border-gray-100 z-10 shadow-sm">
         <div className="flex items-center gap-4">
           <button 
@@ -59,7 +58,6 @@ export default function ChatPage() {
         </div>
       </header>
 
-      {/* 2. 메인 채팅 콘텐츠 영역 */}
       <main className="flex-1 flex flex-col items-center overflow-hidden relative">
         <div 
           ref={scrollRef}
@@ -68,7 +66,6 @@ export default function ChatPage() {
           {roomData.messages.map((msg) => {
             if (msg.isSystem) {
               const isLockerInfo = msg.content.includes("🔐");
-
               return (
                 <div key={msg.id} className="flex justify-center my-8 px-4">
                   <span className={`px-6 py-3 rounded-[1.5rem] text-[11px] font-black uppercase tracking-tighter border shadow-lg transition-all ${
@@ -88,14 +85,12 @@ export default function ChatPage() {
                 senderName={msg.senderName}
                 content={msg.content}
                 timestamp={msg.timestamp}
-                // 동적으로 Sender/Receiver 판별
                 isSender={checkIsMe(msg.senderId)}
               />
             );
           })}
         </div>
 
-        {/* 3. 하단 메시지 입력창 */}
         <div className="w-full p-6 bg-white border-t border-gray-50 z-10">
           <div className="flex items-center gap-2 max-w-4xl mx-auto">
             <button className="p-4 bg-white border border-gray-100 text-gray-400 rounded-2xl hover:text-blue-600 transition-colors shadow-sm active:scale-95">
