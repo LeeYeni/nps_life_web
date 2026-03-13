@@ -3,26 +3,33 @@
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { 
-  MessageCircle, 
-  Inbox,
-  LayoutGrid,
-  Tag
+  MessageCircle, Inbox, LayoutGrid, Tag, Car, 
+  ChevronRight, Clock, Bluetooth, CheckCircle2, 
+  CreditCard, Navigation, MapPin
 } from "lucide-react";
 
 export default function MyMeetingPage() {
   const router = useRouter();
   const [joinedMeetings, setJoinedMeetings] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState<string>("전체");
+  
+  // 모빌리티 모임들의 개별 진행 단계 관리 (ID별로 step 저장)
+  // step: 0(대기/인증), 1(운행중), 2(정산중), 3(완료)
+  const [mobilitySteps, setMobilitySteps] = useState<Record<string, number>>({});
 
-  // 1. 데이터 로드 (클라이언트 사이드 전용)
   useEffect(() => {
     const saved = localStorage.getItem("joinedMeetings");
     if (saved) {
       try {
         const parsedData = JSON.parse(saved);
-        // 배열인지 확인 후 상태 업데이트
         if (Array.isArray(parsedData)) {
           setJoinedMeetings(parsedData);
+          // 초기 step 설정
+          const steps: Record<string, number> = {};
+          parsedData.forEach(m => {
+            if (m.category === "모빌리티") steps[m.id] = 0;
+          });
+          setMobilitySteps(steps);
         }
       } catch (e) {
         console.error("데이터 파싱 오류:", e);
@@ -30,21 +37,13 @@ export default function MyMeetingPage() {
     }
   }, []);
 
-  // 2. 카테고리 추출 (useMemo를 사용하여 성능 최적화 및 안정성 확보)
-  const categories = useMemo(() => {
-    // 기본값 "전체" 포함
-    const base = ["전체"];
-    
-    // 데이터에서 유효한 category 추출
-    const dynamicCategories = joinedMeetings
-      .map((m) => m.category)
-      .filter((cat): cat is string => Boolean(cat)); // null, undefined, "" 제거
+  const handleStepNext = (id: string) => {
+    setMobilitySteps(prev => ({
+      ...prev,
+      [id]: Math.min((prev[id] || 0) + 1, 3)
+    }));
+  };
 
-    // 중복 제거 후 합치기
-    return [...base, ...Array.from(new Set(dynamicCategories))];
-  }, [joinedMeetings]);
-
-  // 3. 필터링 로직
   const filteredMeetings = useMemo(() => {
     if (activeTab === "전체") return joinedMeetings;
     return joinedMeetings.filter((m) => m.category === activeTab);
@@ -56,23 +55,22 @@ export default function MyMeetingPage() {
         <div className="max-w-3xl mx-auto px-6 pt-10 pb-6 space-y-8">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-50 rounded-xl transition-transform hover:rotate-12">
+              <div className="p-2 bg-blue-50 rounded-xl">
                 <LayoutGrid className="text-blue-600" size={20} />
               </div>
-              <h1 className="text-2xl font-black text-gray-900 tracking-tighter">내 모임</h1>
+              <h1 className="text-2xl font-black text-gray-900 tracking-tighter">내 활동 내역</h1>
             </div>
           </div>
           
-          {/* 카테고리 탭 영역 */}
           <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
-            {categories.map((cat) => (
+            {["전체", "모빌리티", "공구"].map((cat) => (
               <button
                 key={cat}
                 onClick={() => setActiveTab(cat)}
-                className={`px-6 py-3 rounded-2xl text-[11px] font-black whitespace-nowrap transition-all uppercase tracking-tighter shadow-sm ${
+                className={`px-6 py-3 rounded-2xl text-[11px] font-black whitespace-nowrap transition-all uppercase tracking-tighter ${
                   activeTab === cat 
-                  ? "bg-blue-600 text-white shadow-blue-100 scale-105" 
-                  : "bg-white text-gray-400 border border-gray-100 hover:border-blue-200"
+                  ? "bg-blue-600 text-white shadow-xl shadow-blue-100" 
+                  : "bg-white text-gray-400 border border-gray-100"
                 }`}
               >
                 {cat}
@@ -83,68 +81,92 @@ export default function MyMeetingPage() {
       </div>
 
       <main className="max-w-3xl mx-auto px-6 py-12">
-        {filteredMeetings.length > 0 ? (
-          <div className="grid grid-cols-1 gap-6">
-            {filteredMeetings.map((meeting, idx) => (
-              <div 
-                key={`${meeting.id}-${idx}`}
-                className="group bg-white rounded-[2.5rem] p-8 border border-gray-100 shadow-sm hover:shadow-md transition-all animate-in fade-in slide-in-from-bottom-5 duration-500"
-              >
-                <div className="flex justify-between items-start mb-8">
+        <div className="grid grid-cols-1 gap-6">
+          {filteredMeetings.map((meeting) => {
+            const isMobility = meeting.category === "모빌리티";
+            const currentStep = mobilitySteps[meeting.id] || 0;
+            const isLeader = meeting.role === "LEADER";
+
+            return (
+              <div key={meeting.id} className="bg-white rounded-[2.5rem] p-8 border border-gray-100 shadow-sm">
+                <div className="flex justify-between items-start mb-6">
                   <div className="space-y-3">
                     <div className="flex items-center gap-2">
-                      <div className="flex items-center gap-1 bg-blue-600 text-white px-2.5 py-1 rounded-lg">
-                        <Tag size={10} />
-                        <span className="text-[10px] font-black uppercase tracking-widest">
-                          {meeting.category || "공구"}
-                        </span>
-                      </div>
+                      <span className={`text-[9px] font-black px-2 py-1 rounded-md uppercase tracking-widest ${
+                        isMobility ? "bg-gray-900 text-white" : "bg-blue-600 text-white"
+                      }`}>
+                        {meeting.category}
+                      </span>
                     </div>
-                    <h3 className="text-xl font-black text-gray-900 leading-tight tracking-tight group-hover:text-blue-600 transition-colors">
-                      {meeting.title}
-                    </h3>
-                  </div>
-                  
-                  <div className="flex -space-x-3">
-                    {[1, 2, 3].map((i) => (
-                      <div key={i} className="w-9 h-9 rounded-2xl border-4 border-white bg-gray-50 flex items-center justify-center shadow-sm overflow-hidden">
-                        <div className="w-full h-full bg-blue-50 text-blue-400 flex items-center justify-center text-[11px] font-black italic">
-                          U
-                        </div>
+                    <h3 className="text-xl font-black text-gray-900 leading-tight">{meeting.title}</h3>
+                    {isMobility && (
+                      <div className="flex items-center gap-2 text-gray-400 text-[11px] font-bold">
+                        <MapPin size={12} className="text-blue-500"/> {meeting.origin} 
+                        <ChevronRight size={10}/> 
+                        <MapPin size={12} className="text-red-500"/> {meeting.destination}
                       </div>
-                    ))}
+                    )}
                   </div>
                 </div>
 
                 <div className="w-full">
-                  <button 
-                    onClick={() => router.push('/chat')}
-                    className="w-full flex items-center justify-center gap-2 py-5 bg-gray-900 text-white rounded-[1.8rem] text-sm font-black hover:bg-blue-600 transition-all active:scale-95 shadow-2xl shadow-gray-200 group-hover:translate-y-[-2px]"
-                  >
-                    <MessageCircle size={18} /> 
-                    실시간 톡방 입장하기
-                  </button>
+                  {isMobility ? (
+                    <div className="space-y-3">
+                      {/* Step 0: 탑승 대기 */}
+                      {currentStep === 0 && (
+                        <button 
+                          onClick={() => handleStepNext(meeting.id)}
+                          className="w-full flex items-center justify-center gap-2 py-5 bg-blue-600 text-white rounded-[1.8rem] text-sm font-black shadow-lg shadow-blue-100 animate-in zoom-in-95"
+                        >
+                          <Bluetooth className="animate-pulse" size={18} />
+                          {isLeader ? "인원 확인 및 운행 시작" : "탑승 완료 확인 (BLE)"}
+                        </button>
+                      )}
+
+                      {/* Step 1: 운행 중 */}
+                      {currentStep === 1 && (
+                        <button 
+                          onClick={() => handleStepNext(meeting.id)}
+                          className="w-full flex items-center justify-center gap-2 py-5 bg-gray-900 text-white rounded-[1.8rem] text-sm font-black animate-pulse"
+                        >
+                          <Navigation size={18} />
+                          {isLeader ? "목적지 도착 (정산 시작)" : "운행 중... (도착 대기)"}
+                        </button>
+                      )}
+
+                      {/* Step 2: 정산 진행 */}
+                      {currentStep === 2 && (
+                        <button 
+                          onClick={() => handleStepNext(meeting.id)}
+                          className="w-full flex items-center justify-center gap-2 py-5 bg-green-600 text-white rounded-[1.8rem] text-sm font-black shadow-lg shadow-green-100"
+                        >
+                          <CreditCard size={18} />
+                          {isLeader ? "정산 현황 확인" : "1/N 즉시 정산하기"}
+                        </button>
+                      )}
+
+                      {/* Step 3: 완료 */}
+                      {currentStep === 3 && (
+                        <div className="w-full flex items-center justify-center gap-2 py-5 bg-gray-100 text-gray-400 rounded-[1.8rem] text-sm font-black border border-dashed border-gray-200">
+                          <CheckCircle2 size={18} className="text-green-500" />
+                          이용 및 정산 완료
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <button 
+                      onClick={() => router.push('/chat')}
+                      className="w-full flex items-center justify-center gap-2 py-5 bg-gray-900 text-white rounded-[1.8rem] text-sm font-black"
+                    >
+                      <MessageCircle size={18} /> 
+                      실시간 톡방 입장하기
+                    </button>
+                  )}
                 </div>
               </div>
-            ))}
-          </div>
-        ) : (
-          <div className="py-24 flex flex-col items-center text-center space-y-5 bg-white rounded-[3.5rem] border-2 border-dashed border-gray-100 animate-in zoom-in-95">
-            <div className="w-20 h-20 bg-gray-50 rounded-3xl flex items-center justify-center text-gray-200">
-              <Inbox size={40} strokeWidth={1.5} />
-            </div>
-            <div className="space-y-1">
-              <p className="text-gray-900 font-black text-lg tracking-tight uppercase italic">No Activity</p>
-              <p className="text-gray-400 font-bold text-sm tracking-tighter">참여 중인 {activeTab} 모임이 없습니다.</p>
-            </div>
-            <button 
-              onClick={() => router.push('/')}
-              className="px-8 py-3 bg-blue-50 text-blue-600 rounded-2xl text-xs font-black hover:bg-blue-600 hover:text-white transition-all shadow-sm"
-            >
-              모임 찾으러 가기
-            </button>
-          </div>
-        )}
+            );
+          })}
+        </div>
       </main>
     </div>
   );

@@ -8,6 +8,7 @@ import { persona2 } from "@/mockup_data/persona2";
 import { persona3 } from "@/mockup_data/persona3";
 import { persona4 } from "@/mockup_data/persona4";
 import { mockMeetings } from "@/mockup_data/meeting";
+import { mockMatchingRooms } from "@/mockup_data/matching"; // 모빌리티 목업 추가
 
 export default function PersonaPage() {
   const router = useRouter();
@@ -19,31 +20,50 @@ export default function PersonaPage() {
   }, []);
 
   const handleSelectPersona = (personaKey: string) => {
-    // 1. 기본 로그인 및 페르소나 키 저장
     localStorage.setItem("isLogin", "true");
     localStorage.setItem("persona", personaKey);
     
-    // 2. [추가] 방장 여부 저장 (채팅 방향 결정용)
-    // 페르소나 3은 방장(true), 나머지는 참여자(false)로 설정
-    const isLeader = personaKey === "persona3";
-    localStorage.setItem("isLeader", String(isLeader));
-    
-    // 3. 페르소나별 초기 모임 데이터 주입
-    if (personaKey === "persona3" || personaKey === "persona4") {
-      const initialMeeting = {
+    let initialMeetings = [];
+
+    // --- [시뮬레이션 로직 분기] ---
+
+    if (personaKey === "persona1") {
+      // 1. 페르소나 1: 카풀 방장 시나리오 주입
+      localStorage.setItem("isLeader", "true");
+      initialMeetings.push({
+        ...mockMatchingRooms[0], // 카풀 목업 데이터
+        category: "모빌리티",
+        role: "LEADER",
+        joinedAt: new Date().toISOString(),
+      });
+    } 
+    else if (personaKey === "persona2") {
+      // 2. 페르소나 2: 택시 수요자(참여자) 시나리오 주입
+      localStorage.setItem("isLeader", "false");
+      initialMeetings.push({
+        ...mockMatchingRooms[1], // 택시 목업 데이터
+        category: "모빌리티",
+        role: "MEMBER",
+        joinedAt: new Date().toISOString(),
+      });
+    }
+    else if (personaKey === "persona3" || personaKey === "persona4") {
+      // 3. 기존 공구 시나리오 (페르소나 3, 4)
+      const isLeader = personaKey === "persona3";
+      localStorage.setItem("isLeader", String(isLeader));
+      initialMeetings.push({
         ...mockMeetings[0],
         category: "공구",
         role: isLeader ? "leader" : "member",
         joinedAt: new Date().toISOString(),
-      };
-      
-      localStorage.setItem("joinedMeetings", JSON.stringify([initialMeeting]));
-    } else {
-      localStorage.removeItem("joinedMeetings");
-      localStorage.setItem("isLeader", "false"); // 기본값
+      });
+    } 
+    else {
+      localStorage.setItem("isLeader", "false");
     }
-    
-    // UI 동기화 이벤트
+
+    // 데이터 저장 및 이벤트 발생
+    localStorage.setItem("joinedMeetings", JSON.stringify(initialMeetings));
     window.dispatchEvent(new Event("storage")); 
     window.dispatchEvent(new Event("joinedMeetingsUpdate")); 
     
