@@ -62,10 +62,10 @@ export default function PersonaPage() {
     <div className="flex flex-1 flex-col items-center justify-center bg-gray-50 py-12 px-4 min-h-screen">
       <div className="mx-auto max-w-7xl w-full text-center">
         <h1 className="mb-4 text-3xl font-black text-gray-900 sm:text-4xl tracking-tighter italic uppercase">
-          Select Persona
+          시뮬레이션을 위한 페르소나를 선택해주세요
         </h1>
         <p className="mb-12 text-gray-500 text-lg font-medium">
-          선택한 페르소나에 따라 <span className="text-blue-600 font-bold">채팅 인터페이스</span>가 자동으로 전환됩니다.
+          유형에 따라 자동으로 '내 모임'이 생성되며, 마이페이지에서 확인하실 수 있습니다
         </p>
 
         <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-4">
