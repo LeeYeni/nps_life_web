@@ -224,7 +224,7 @@ export default function MatchingPage() {
                <h3 className="text-xl font-black text-gray-900 mb-2">
                  {selectedTab === "matching" ? "방향 유사도를 분석하고 있어요!" : "신규 경로를 시스템에 등록 중입니다"}
                </h3>
-               <p className="text-sm font-bold text-gray-400 italic">매칭 시뮬레이션 가동 중...</p>
+               <p className="text-sm font-bold text-gray-400 italic">3정류장 이내의 카풀/택시 팟을 찾고 있습니다</p>
             </div>
           )}
         </div>
