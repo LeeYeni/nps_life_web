@@ -2,10 +2,15 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, PlusCircle, ShoppingBasket } from "lucide-react";
-import { mockProductItems } from "@/mockup_data/group";
+import { 
+  ShoppingBasket,
+} from "lucide-react";
+
+// 데이터 및 컴포넌트 임포트
+import { mockMeetings } from "@/mockup_data/meeting"; 
 import ProductCard from "@/component/productCard";
-import { ProductItem } from "@/schema/group";
+import MeetingCard from "@/component/meeting"; // 공구 모임 카드 컴포넌트
+import { ProductItem } from "@/schema/groupBuy";
 
 export default function CartPage() {
   const router = useRouter();
@@ -21,30 +26,13 @@ export default function CartPage() {
     }
   };
 
-  // 초기 렌더링 시 데이터 로드
+  // 초기 렌더링 및 실시간 동기화 설정
   useEffect(() => {
     loadCart();
-
-    // 다른 탭이나 컴포넌트에서 변경 시 동기화를 위한 이벤트 리스너 (선택 사항)
     const handleCartUpdate = () => loadCart();
     window.addEventListener("cartUpdate", handleCartUpdate);
     return () => window.removeEventListener("cartUpdate", handleCartUpdate);
   }, []);
-
-  // 2. 추천 섹션에서 상품을 추가하는 핸들러
-  const handleAddFromRecommendation = (item: ProductItem) => {
-    const savedCart = localStorage.getItem("cart");
-    const cart: ProductItem[] = savedCart ? JSON.parse(savedCart) : [];
-    
-    if (cart.some((cartItem) => cartItem.name === item.name)) {
-      alert("이미 담겨 있는 상품입니다.");
-      return;
-    }
-
-    const newCart = [...cart, item];
-    localStorage.setItem("cart", JSON.stringify(newCart));
-    loadCart(); // UI 갱신
-  };
 
   return (
     <div className="min-h-screen w-full bg-gray-50 pb-20">
@@ -52,9 +40,7 @@ export default function CartPage() {
       <div className="bg-white border-b border-gray-200 sticky top-0 z-30">
         <div className="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <button onClick={() => router.back()} className="p-2 hover:bg-gray-100 rounded-full">
-              <ArrowLeft size={24} />
-            </button>
+            <ShoppingBasket className="text-blue-600" />
             <h1 className="text-xl font-black text-gray-900">내 장바구니</h1>
           </div>
           <span className="text-sm font-bold text-blue-600 bg-blue-50 px-3 py-1 rounded-full">
@@ -65,19 +51,12 @@ export default function CartPage() {
 
       <main className="max-w-5xl mx-auto px-6 py-10 space-y-12">
         
-        {/* --- 섹션 1: 내가 담은 목록 (localStorage 기반) --- */}
+        {/* --- 섹션 1: 내가 담은 목록 --- */}
         <section className="space-y-6">
-          <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-black text-gray-900 flex items-center gap-2">
-              <ShoppingBasket className="text-blue-600" />
-              내가 담은 소분 물품
-            </h2>
-          </div>
-
           {myCart.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {myCart.map((item, idx) => (
-                <div key={`${item.name}-${idx}`} className="relative group">
+                <div key={`${item.name}-${idx}`} className="relative">
                   <ProductCard item={item} />
                 </div>
               ))}
@@ -95,34 +74,32 @@ export default function CartPage() {
           )}
         </section>
 
-        {/* --- 섹션 2: 유사한 모임 추천 (부가) --- */}
-        <section className="space-y-8 pt-6 border-t border-gray-200">
-          <div className="space-y-1">
-            <h2 className="text-xl font-black text-gray-900">이런 모임은 어떠세요?</h2>
-            <p className="text-sm text-gray-500 font-medium">현재 인기 있는 소분 품목들을 추천해 드려요.</p>
-          </div>
+        {/* --- 섹션 2: 동네 공구 모임 추천 --- */}
+        {myCart.length > 0 && (
+          <section className="space-y-8 pt-10 border-t border-gray-200 animate-in fade-in slide-in-from-bottom-4 duration-700">
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2">
+              <div className="space-y-1">
+                <h2 className="text-2xl font-black text-gray-900 tracking-tighter">
+                  동네 공구 모임 <span className="text-blue-600">TOP 3</span>를 추천드려요!
+                </h2>
+                <p className="text-sm text-gray-500 font-medium break-keep">
+                  담아두신 식재료, 혼자 결제하기 부담스럽다면? 유사한 품목의 '동네 팟'에 합류하세요.
+                </p>
+              </div>
+            </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {/* 장바구니에 없는 아이템만 필터링하여 추천 */}
-            {mockProductItems
-              .filter(item => !myCart.some(cartItem => cartItem.name === item.name))
-              .slice(0, 3)
-              .map((item, idx) => (
-                <div key={`rec-${idx}`} className="flex flex-col">
-                  <div className="opacity-80 hover:opacity-100 transition-opacity scale-95 origin-top">
-                    <ProductCard item={item} />
-                  </div>
-                  <button 
-                    onClick={() => handleAddFromRecommendation(item)}
-                    className="mt-3 w-full py-3 bg-white border border-gray-200 hover:border-blue-200 hover:bg-blue-50 text-gray-600 hover:text-blue-600 rounded-2xl text-xs font-black transition-all flex items-center justify-center gap-2 shadow-sm"
-                  >
-                    <PlusCircle size={14} />
-                    함께 담기
-                  </button>
-                </div>
-            ))}
-          </div>
-        </section>
+            {/* [수정 포인트] MeetingCard에 category="공구" 인자 전달 */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {mockMeetings.slice(0, 3).map((meeting) => (
+                <MeetingCard 
+                  key={meeting.id} 
+                  meeting={meeting} 
+                  category="공구" 
+                />
+              ))}
+            </div>
+          </section>
+        )}
       </main>
     </div>
   );

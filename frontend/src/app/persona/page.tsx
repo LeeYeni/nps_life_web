@@ -2,11 +2,12 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import PersonaCard from "@/component/persona"; // 대문자 체크 필요
+import PersonaCard from "@/component/persona"; 
 import { persona1 } from "@/mockup_data/persona1";
 import { persona2 } from "@/mockup_data/persona2";
 import { persona3 } from "@/mockup_data/persona3";
-import { persona4 } from "@/mockup_data/persona4"; // 페르소나 4 추가
+import { persona4 } from "@/mockup_data/persona4";
+import { mockMeetings } from "@/mockup_data/meeting";
 
 export default function PersonaPage() {
   const router = useRouter();
@@ -18,15 +19,35 @@ export default function PersonaPage() {
   }, []);
 
   const handleSelectPersona = (personaKey: string) => {
+    // 1. 기본 로그인 및 페르소나 키 저장
     localStorage.setItem("isLogin", "true");
     localStorage.setItem("persona", personaKey);
     
-    // Header 및 Home 화면 동기화를 위한 이벤트 트리거
+    // 2. [추가] 방장 여부 저장 (채팅 방향 결정용)
+    // 페르소나 3은 방장(true), 나머지는 참여자(false)로 설정
+    const isLeader = personaKey === "persona3";
+    localStorage.setItem("isLeader", String(isLeader));
+    
+    // 3. 페르소나별 초기 모임 데이터 주입
+    if (personaKey === "persona3" || personaKey === "persona4") {
+      const initialMeeting = {
+        ...mockMeetings[0],
+        category: "공구",
+        role: isLeader ? "leader" : "member",
+        joinedAt: new Date().toISOString(),
+      };
+      
+      localStorage.setItem("joinedMeetings", JSON.stringify([initialMeeting]));
+    } else {
+      localStorage.removeItem("joinedMeetings");
+      localStorage.setItem("isLeader", "false"); // 기본값
+    }
+    
+    // UI 동기화 이벤트
     window.dispatchEvent(new Event("storage")); 
+    window.dispatchEvent(new Event("joinedMeetingsUpdate")); 
     
     setSelectedPersona(personaKey);
-    
-    // 1/N 정산 시뮬레이션 메인 홈으로 이동
     router.push("/");
   };
 
@@ -38,29 +59,27 @@ export default function PersonaPage() {
   ];
 
   return (
-    <div className="flex flex-1 flex-col items-center justify-center bg-gray-50 py-12 px-4">
+    <div className="flex flex-1 flex-col items-center justify-center bg-gray-50 py-12 px-4 min-h-screen">
       <div className="mx-auto max-w-7xl w-full text-center">
-        {/* 헤더 섹션: 플랫폼 목적 명시 */}
-        <h1 className="mb-4 text-3xl font-black text-gray-900 sm:text-4xl tracking-tighter">
-          시뮬레이션을 위한 페르소나를 선택해주세요
+        <h1 className="mb-4 text-3xl font-black text-gray-900 sm:text-4xl tracking-tighter italic uppercase">
+          Select Persona
         </h1>
         <p className="mb-12 text-gray-500 text-lg font-medium">
-          유형에 따라 인증 지표와 정산 로직이 다르게 적용됩니다.
+          선택한 페르소나에 따라 <span className="text-blue-600 font-bold">채팅 인터페이스</span>가 자동으로 전환됩니다.
         </p>
 
-        {/* 페르소나 그리드: 2x2 혹은 3열 레이아웃 */}
         <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-4">
           {personas.map((p) => (
             <div 
               key={p.key}
               onClick={() => handleSelectPersona(p.key)}
-              className="cursor-pointer transition-transform hover:-translate-y-2"
+              className="cursor-pointer transition-all hover:-translate-y-2 group"
             >
-              <PersonaCard
-                user={p.data}
-                // isSelected 등 추가 prop이 PersonaCard에 정의되어 있다면 유지
-              />
-              <div className={`mt-4 h-1 w-full rounded-full transition-colors ${selectedPersona === p.key ? 'bg-blue-600' : 'bg-transparent'}`} />
+              <div className={`rounded-[2.5rem] p-1 transition-all ${
+                selectedPersona === p.key ? 'bg-blue-600 shadow-xl' : 'bg-transparent hover:bg-gray-200'
+              }`}>
+                <PersonaCard user={p.data} />
+              </div>
             </div>
           ))}
         </div>

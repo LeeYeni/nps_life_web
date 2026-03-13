@@ -5,26 +5,38 @@ import { useState, useEffect } from "react";
 import { 
   User, 
   LogOut, 
-  ShoppingCart, // 장바구니용
-  Users,        // 모임용
+  ShoppingCart, 
+  Users,         
   ChevronDown
 } from "lucide-react";
 
 export default function Header() {
   const [isLogin, setIsLogin] = useState<boolean>(false);
-  const [persona, setPersona] = useState<string | null>(null);
   const [showMenu, setShowMenu] = useState<boolean>(false);
+  // 참여한 모임이 있는지 확인하는 상태 추가
+  const [hasJoinedMeeting, setHasJoinedMeeting] = useState<boolean>(false);
 
   const updateStateFromStorage = () => {
     const loginItem = localStorage.getItem("isLogin") === "true";
-    const personaItem = localStorage.getItem("persona");
     setIsLogin(loginItem);
-    setPersona(personaItem);
+
+    // joinedMeetings 데이터가 있고, 배열의 길이가 0보다 큰지 확인
+    const joinedMeetings = localStorage.getItem("joinedMeetings");
+    if (joinedMeetings) {
+      const parsed = JSON.parse(joinedMeetings);
+      setHasJoinedMeeting(Array.isArray(parsed) && parsed.length > 0);
+    } else {
+      setHasJoinedMeeting(false);
+    }
   };
 
   useEffect(() => {
     updateStateFromStorage();
+    
+    // storage 이벤트는 다른 탭에서 변경될 때 작동하므로, 
+    // 동일 탭 내 변경 감지를 위해 커스텀 이벤트 리스너 추가
     window.addEventListener("storage", updateStateFromStorage);
+    window.addEventListener("joinedMeetingsUpdate", updateStateFromStorage);
     
     const originalSetItem = localStorage.setItem;
     localStorage.setItem = function (key, value) {
@@ -34,12 +46,15 @@ export default function Header() {
 
     return () => {
       window.removeEventListener("storage", updateStateFromStorage);
+      window.removeEventListener("joinedMeetingsUpdate", updateStateFromStorage);
     };
   }, []);
 
   const handleLogout = () => {
     localStorage.removeItem("isLogin");
     localStorage.removeItem("persona");
+    localStorage.removeItem("cart");
+    localStorage.removeItem("joinedMeetings"); // 로그아웃 시 참여 기록도 초기화
     window.dispatchEvent(new Event("storage"));
     setShowMenu(false);
   };
@@ -51,7 +66,7 @@ export default function Header() {
         {/* 로고 */}
         <Link href="/" className="flex items-center gap-2 transition-transform active:scale-95">
           <span className="text-lg font-black tracking-tighter text-gray-900">
-            1인 가구 맞춤 1/N 정산 시뮬레이션
+            나누리
           </span>
         </Link>
 
@@ -71,12 +86,11 @@ export default function Header() {
 
               {/* 드롭다운 메뉴 */}
               {showMenu && (
-                <div className="absolute right-0 mt-3 w-52 origin-top-right rounded-2xl border border-gray-100 bg-white p-2 shadow-xl ring-1 ring-black/5">
+                <div className="absolute right-0 mt-3 w-52 origin-top-right rounded-2xl border border-gray-100 bg-white p-2 shadow-xl ring-1 ring-black/5 animate-in fade-in slide-in-from-top-2 duration-200">
                   <div className="px-3 py-2 text-[10px] font-black text-gray-400 uppercase tracking-widest">
                     My Menu
                   </div>
                   
-                  {/* 장바구니 아이콘 변경: ShoppingCart */}
                   <Link
                     href="/cart"
                     onClick={() => setShowMenu(false)}
@@ -85,14 +99,16 @@ export default function Header() {
                     <ShoppingCart size={18} strokeWidth={2.5} /> 장바구니
                   </Link>
 
-                  {/* 모임 아이콘 변경: Users */}
-                  <Link
-                    href="/meetings"
-                    onClick={() => setShowMenu(false)}
-                    className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-bold text-gray-600 transition-colors hover:bg-blue-50 hover:text-blue-600"
-                  >
-                    <Users size={18} strokeWidth={2.5} /> 내 모임
-                  </Link>
+                  {/* [수정 포인트] 참여 기록이 있을 때만 '내 모임' 표시 및 /chat 연결 */}
+                  {hasJoinedMeeting && (
+                    <Link
+                      href="/myMeeting"
+                      onClick={() => setShowMenu(false)}
+                      className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-bold text-gray-600 transition-colors hover:bg-blue-50 hover:text-blue-600"
+                    >
+                      <Users size={18} strokeWidth={2.5} /> 내 모임
+                    </Link>
+                  )}
 
                   <div className="my-1 border-t border-gray-50" />
 
@@ -106,10 +122,7 @@ export default function Header() {
                 </div>
               )}
             </div>
-          ) : (
-            <>
-            </>
-          )}
+          ) : null}
         </div>
       </div>
     </header>
