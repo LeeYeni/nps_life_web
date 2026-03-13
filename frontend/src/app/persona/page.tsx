@@ -61,7 +61,7 @@ export default function PersonaPage() {
   return (
     <div className="flex flex-1 flex-col items-center justify-center bg-gray-50 py-12 px-4 min-h-screen">
       <div className="mx-auto max-w-7xl w-full text-center">
-        <h1 className="mb-4 text-3xl font-black text-gray-900 sm:text-4xl tracking-tighter italic uppercase">
+        <h1 className="mb-4 text-3xl font-black text-gray-900 sm:text-4xl tracking-tighter">
           시뮬레이션을 위한 페르소나를 선택해주세요
         </h1>
         <p className="mb-12 text-gray-500 text-lg font-medium">
